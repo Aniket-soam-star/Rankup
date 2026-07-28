@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RankUp Admin Panel</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    body { margin:0; font-family:var(--font-b); background:var(--bg); color:var(--text); }
+    .admin-shell { display:flex; height:100vh; overflow:hidden; }
+    .admin-sidebar {
+      width:210px; min-width:210px; background:var(--surface);
+      border-right:1px solid var(--border); display:flex; flex-direction:column; padding:16px 8px; gap:2px;
+    }
+    .admin-logo {
+      font-family:var(--font-d); font-weight:700; font-size:15px;
+      padding:8px 10px; margin-bottom:8px; color:var(--red);
+      display:flex; align-items:center; gap:8px;
+    }
+    .admin-logo span { font-size:11px; color:var(--text-3); font-weight:400; font-family:var(--font-b); }
+    .admin-main { flex:1; overflow-y:auto; padding:24px; }
+    .admin-table { width:100%; border-collapse:collapse; }
+    .admin-table th {
+      text-align:left; font-size:10.5px; text-transform:uppercase;
+      letter-spacing:.06em; color:var(--text-3); padding:8px 12px;
+      border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    .admin-table td { padding:9px 12px; border-bottom:1px solid var(--border-2); font-size:13px; vertical-align:middle; }
+    .admin-table tr:hover td { background:var(--surface-2); }
+    .sbadge {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 7px; border-radius:99px; font-size:10.5px; font-weight:700;
+      white-space:nowrap;
+    }
+    .sbadge-green  { background:var(--green-dim); color:var(--green); border:1px solid rgba(34,197,94,.2); }
+    .sbadge-red    { background:var(--red-dim); color:var(--red); border:1px solid rgba(239,68,68,.2); }
+    .sbadge-gold   { background:var(--gold-dim); color:var(--gold); border:1px solid rgba(245,158,11,.2); }
+    .sbadge-blue   { background:var(--blue-dim,rgba(59,130,246,.1)); color:#60a5fa; border:1px solid rgba(59,130,246,.2); }
+    .sbadge-gray   { background:var(--surface-2); color:var(--text-3); border:1px solid var(--border); }
+    .action-btn-row { display:flex; gap:3px; flex-wrap:wrap; }
+    .pagination { display:flex; gap:5px; justify-content:center; margin-top:14px; flex-wrap:wrap; }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="admin-login" style="min-height:100vh;display:flex;align-items:center;justify-content:center">
+  <div class="card" style="max-width:380px;width:90%">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+      <div style="width:40px;height:40px;background:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px">
+        <i class="bi bi-shield-lock-fill"></i>
+      </div>
+      <div>
+        <div style="font-family:var(--font-d);font-weight:700;font-size:16px">RankUp Admin</div>
+        <div style="font-size:11.5px;color:var(--red)">Restricted Access</div>
+      </div>
+    </div>
+    <div id="login-error" class="form-error hidden" style="margin-bottom:12px"></div>
+    <div class="form-field">
+      <label class="form-label">Admin Password</label>
+      <input class="input" id="admin-pw" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Authenticator Code</label>
+      <input class="input" id="admin-totp" type="text" placeholder="000000" maxlength="6" inputmode="numeric">
+      <div style="font-size:11px;color:var(--text-3);margin-top:4px">6-digit code from Google Authenticator</div>
+    </div>
+    <button class="btn btn-danger w-full mt" id="admin-login-btn" style="justify-content:center">
+      <i class="bi bi-shield-lock"></i> Access Admin Panel
+    </button>
+  </div>
+</div>
+
+<!-- Shell -->
+<div id="admin-shell" class="admin-shell hidden">
+  <nav class="admin-sidebar">
+    <div class="admin-logo"><i class="bi bi-shield-fill"></i><div>Admin<br><span>RankUp</span></div></div>
+    <a class="nav-link" data-view="dashboard"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+    <a class="nav-link" data-view="users"><i class="bi bi-people"></i><span>Users</span></a>
+    <a class="nav-link" data-view="posts"><i class="bi bi-newspaper"></i><span>Posts</span></a>
+    <a class="nav-link" data-view="messages"><i class="bi bi-chat-dots"></i><span>Messages</span></a>
+    <a class="nav-link" data-view="clans"><i class="bi bi-shield-fill"></i><span>Clans</span></a>
+    <a class="nav-link" data-view="apibans"><i class="bi bi-ban"></i><span>API Bans</span></a>
+    <a class="nav-link" data-view="reports"><i class="bi bi-flag"></i><span>Reports</span></a>
+    <a class="nav-link" data-view="logs"><i class="bi bi-journal-text"></i><span>Audit Logs</span></a>
+    <div style="flex:1"></div>
+    <a class="nav-link" id="admin-logout" style="color:var(--red)"><i class="bi bi-box-arrow-right"></i><span>Sign Out</span></a>
+  </nav>
+  <main class="admin-main" id="admin-main"></main>
+</div>
+
+<div id="toasts"></div>
+<div id="modal-overlay" class="modal-overlay hidden"><div id="modal-box" class="modal-box"></div></div>
+
+<script>
+let adminToken = null
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const el = document.createElement('div')
+  el.className = `toast ${type}`
+  const icons = { success:'bi-check-circle-fill', error:'bi-x-circle-fill', info:'bi-info-circle-fill' }
+  el.innerHTML = `<i class="bi ${icons[type]||icons.info}"></i><span>${msg}</span>`
+  document.getElementById('toasts').appendChild(el)
+  setTimeout(() => el.remove(), 3500)
+}
+
+async function adminFetch(path, opts = {}) {
+  const res = await fetch(`/api/admin${path}`, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${adminToken}`,
+      ...(opts.headers || {})
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+  return data
+}
+
+function timeAgo(d) {
+  if (!d) return '—'
+  const s = (Date.now() - new Date(d)) / 1000
+  if (s < 60) return 'just now'
+  if (s < 3600) return Math.floor(s/60) + 'm ago'
+  if (s < 86400) return Math.floor(s/3600) + 'h ago'
+  return Math.floor(s/86400) + 'd ago'
+}
+
+function av(url, u) {
+  return url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u||'U')}`
+}
+
+function openModal(html) {
+  document.getElementById('modal-overlay').classList.remove('hidden')
+  document.getElementById('modal-box').innerHTML = html
+}
+function closeModal() { document.getElementById('modal-overlay').classList.add('hidden') }
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal()
+})
+
+// ── Login ─────────────────────────────────────────────────────────────────
+document.getElementById('admin-login-btn').addEventListener('click', async () => {
+  const password = document.getElementById('admin-pw').value
+  const totpCode = document.getElementById('admin-totp').value.trim()
+  const errEl    = document.getElementById('login-error')
+  const btn      = document.getElementById('admin-login-btn')
+  errEl.classList.add('hidden')
+  if (!password || !totpCode) { errEl.textContent = 'Fill all fields'; errEl.classList.remove('hidden'); return }
+  btn.disabled = true; btn.textContent = 'Verifying…'
+  try {
+    const { token } = await fetch('/api/admin/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, totpCode })
+    }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+    adminToken = token
+    document.getElementById('admin-login').classList.add('hidden')
+    document.getElementById('admin-shell').classList.remove('hidden')
+    loadView('dashboard')
+  } catch (e) {
+    errEl.textContent = e.message || 'Invalid credentials'
+    errEl.classList.remove('hidden')
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-shield-lock"></i> Access Admin Panel'
+  }
+})
+document.getElementById('admin-totp').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('admin-login-btn').click()
+})
+
+// ── Nav ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('[data-view]').forEach(link => {
+  link.addEventListener('click', () => loadView(link.dataset.view))
+})
+document.getElementById('admin-logout').addEventListener('click', () => {
+  adminToken = null
+  document.getElementById('admin-shell').classList.add('hidden')
+  document.getElementById('admin-login').classList.remove('hidden')
+  document.getElementById('admin-pw').value = ''
+  document.getElementById('admin-totp').value = ''
+})
+
+function loadView(view) {
+  document.querySelectorAll('[data-view]').forEach(l => l.classList.toggle('active', l.dataset.view === view))
+  const main = document.getElementById('admin-main')
+  main.innerHTML = '<div class="state-container"><div class="spinner"></div></div>'
+  const views = { dashboard: loadDashboard, users: loadUsers, posts: loadPosts,
+    messages: loadMessages, clans: loadClansView, apibans: loadApiBans,
+    reports: loadReports, logs: loadLogs }
+  views[view]?.(main)
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────
+async function loadDashboard(main) {
+  try {
+    const data = await adminFetch('/stats')
+    const s = data.stats || data
+    main.innerHTML = `
+      <div class="page-header"><h1 class="page-title" style="font-size:20px"><i class="bi bi-speedometer2"></i> Dashboard</h1></div>
+      <div class="stat-grid" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-value" style="color:var(--accent-3)">${s.totalUsers||s.total_users||0}</div><div class="stat-label">Total Users</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--gold)">${s.activeUsersToday||s.active_today||0}</div><div class="stat-label">Active Today</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--green)">${s.totalPosts||s.total_posts||0}</div><div class="stat-label">Total Posts</div></div>
+        <div class="stat-card"><div class="stat-value">${s.totalGamesPlayed||s.total_games_played||0}</div><div class="stat-label">Games Played</div></div>
+        <div class="stat-card"><div class="stat-value">${s.totalClans||s.total_clans||0}</div><div class="stat-label">Clans</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--red)">${s.pendingReports||s.pending_reports||0}</div><div class="stat-label">Pending Reports</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        ${[['users','bi-people','Users','View & manage all users'],
+           ['posts','bi-newspaper','Posts','Review & delete posts'],
+           ['messages','bi-chat-dots','Messages','Delete chat messages'],
+           ['clans','bi-shield-fill','Clans','Manage clan membership'],
+           ['apibans','bi-ban','API Bans','View active API bans'],
+           ['reports','bi-flag','Reports','Review user reports'],
+           ['logs','bi-journal-text','Audit Logs','Full activity log'],
+          ].map(([v,icon,title,desc]) => `
+          <div class="card card-sm" style="cursor:pointer;transition:var(--trans)" onclick="loadView('${v}')"
+            onmouseover="this.style.borderColor='var(--accent-glow)'" onmouseout="this.style.borderColor=''">
+            <div style="font-size:20px;margin-bottom:6px"><i class="bi ${icon}" style="color:var(--accent-3)"></i></div>
+            <div style="font-weight:700;font-size:13.5px">${title}</div>
+            <div style="font-size:12px;color:var(--text-3);margin-top:2px">${desc}</div>
+          </div>
+        `).join('')}
+      </div>
+    `
+  } catch (e) { main.innerHTML = `<div class="state-container"><p class="state-desc">${e.message}</p></div>` }
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────
+async function loadUsers(main, search = '', page = 1) {
+  try {
+    const q = new URLSearchParams({ page, limit: 20, ...(search ? { search } : {}) })
+    const { users, total, totalPages } = await adminFetch(`/users?${q}`)
+    main.innerHTML = `
+      <div class="page-header">
+        <h1 class="page-title" style="font-size:20px"><i class="bi bi-people"></i> Users <span style="font-size:13px;font-weight:400;color:var(--text-3)">${total} total</span></h1>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input class="input" id="user-search" placeholder="Search username or email…" value="${search}" style="max-width:280px">
+        <button class="btn btn-secondary btn-sm" id="do-search"><i class="bi bi-search"></i></button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="admin-table">
+          <thead><tr>
+            <th>User</th><th>Email</th><th>Joined</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            ${users.map(u => `
+              <tr>
+                <td>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <img src="${av(u.avatar_url, u.username)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">
+                    <div>
+                      <div style="font-weight:600">${u.username}</div>
+                      <div style="font-size:11px;color:var(--text-3)">${u.platform||''}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="color:var(--text-2);font-size:12px">${u.email}</td>
+                <td style="color:var(--text-3);font-size:12px">${timeAgo(u.created_at)}</td>
+                <td>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    ${u.is_banned ? '<span class="sbadge sbadge-red"><i class="bi bi-slash-circle"></i> Banned</span>' : '<span class="sbadge sbadge-green"><i class="bi bi-check-circle"></i> Active</span>'}
+                    ${u.soft_banned ? '<span class="sbadge sbadge-gold"><i class="bi bi-eye-slash"></i> Soft-banned</span>' : ''}
+                    ${u.muted_until && new Date(u.muted_until) > new Date() ? '<span class="sbadge sbadge-blue"><i class="bi bi-mic-mute"></i> Muted</span>' : ''}
+                  </div>
+                </td>
+                <td>
+                  <div class="action-btn-row">
+                    <button class="btn btn-ghost btn-sm" onclick="viewUser(${u.id},'${escAttr(u.username)}')" title="Details"><i class="bi bi-person-lines-fill"></i></button>
+                    ${u.is_banned
+                      ? `<button class="btn btn-secondary btn-sm" onclick="adminAction('POST','/users/${u.id}/unban',{},'Unban ${escAttr(u.username)}?','Unbanned!')" title="Unban"><i class="bi bi-person-check"></i></button>`
+                      : `<button class="btn btn-danger btn-sm" onclick="banUser(${u.id},'${escAttr(u.username)}')" title="Ban"><i class="bi bi-slash-circle"></i></button>`
+                    }
+                    ${u.soft_banned
+                      ? `<button class="btn btn-secondary btn-sm" onclick="adminAction('POST','/users/${u.id}/unsoftban',{},'Remove soft-ban?','Soft-ban removed!')" title="Remove soft-ban"><i class="bi bi-eye"></i></button>`
+                      : `<button class="btn btn-secondary btn-sm" onclick="softBanUser(${u.id},'${escAttr(u.username)}')" title="Soft-ban"><i class="bi bi-eye-slash"></i></button>`
+                    }
+                    ${u.muted_until && new Date(u.muted_until) > new Date()
+                      ? `<button class="btn btn-secondary btn-sm" onclick="adminAction('POST','/users/${u.id}/unmute',{},'Unmute ${escAttr(u.username)}?','Unmuted!')" title="Unmute"><i class="bi bi-mic"></i></button>`
+                      : `<button class="btn btn-secondary btn-sm" onclick="muteUser(${u.id},'${escAttr(u.username)}')" title="Mute"><i class="bi bi-mic-mute"></i></button>`
+                    }
+                    <button class="btn btn-secondary btn-sm" onclick="apiBanUser(${u.id},'${escAttr(u.username)}')" title="API Ban"><i class="bi bi-ban"></i></button>
+                    <button class="btn btn-ghost btn-sm" onclick="adminAction('DELETE','/users/${u.id}',null,'Delete ${escAttr(u.username)} permanently?','User deleted!',true)" title="Delete" style="color:var(--red)"><i class="bi bi-trash3"></i></button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        ${Array.from({ length: totalPages||1 }, (_,i) => `
+          <button class="btn ${i+1===page?'btn-primary':'btn-secondary'} btn-sm"
+            onclick="loadUsers(document.getElementById('admin-main'), document.getElementById('user-search')?.value||'', ${i+1})">${i+1}</button>
+        `).join('')}
+      </div>
+    `
+    main.querySelector('#do-search').addEventListener('click', () =>
+      loadUsers(main, main.querySelector('#user-search').value))
+    main.querySelector('#user-search').addEventListener('keydown', e => {
+      if (e.key === 'Enter') loadUsers(main, e.target.value)
+    })
+  } catch (e) { main.innerHTML = `<div class="state-container"><p class="state-desc">${e.message}</p></div>` }
+}
+
+function escAttr(s) { return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;') }
+
+window.banUser = (id, username) => {
+  openModal(`
+    <div class="modal-title"><i class="bi bi-slash-circle" style="color:var(--red)"></i> Ban ${username}</div>
+    <div class="form-field"><label class="form-label">Reason</label>
+      <select class="input" id="ban-reason">
+        <option>Harassment</option><option>Spam</option><option>Cheating</option>
+        <option>Inappropriate content</option><option>Hate speech</option><option>Other</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="do-ban"><i class="bi bi-slash-circle"></i> Confirm Ban</button>
+    </div>
+  `)
+  document.getElementById('do-ban').addEventListener('click', async () => {
+    const reason = document.getElementById('ban-reason').value
+    try {
+      await adminFetch(`/users/${id}/ban`, { method:'POST', body:{ reason } })
+      closeModal(); toast(`${username} banned`, 'success')
+      loadUsers(document.getElementById('admin-main'))
+    } catch (e) { toast(e.message, 'error') }
+  })
+}
+
+window.softBanUser = (id, username) => {
+  openModal(`
+    <div class="modal-title"><i class="bi bi-eye-slash" style="color:var(--gold)"></i> Soft-ban ${username}</div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">User can browse but cannot post, chat, join clans, or send friend requests.</p>
+    <div class="form-field"><label class="form-label">Reason</label>
+      <input class="input" id="sb-reason" placeholder="Reason for soft-ban…">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="do-sb"><i class="bi bi-eye-slash"></i> Soft-ban</button>
+    </div>
+  `)
+  document.getElementById('do-sb').addEventListener('click', async () => {
+    const reason = document.getElementById('sb-reason').value || 'No reason provided'
+    try {
+      await adminFetch(`/users/${id}/softban`, { method:'POST', body:{ reason } })
+      closeModal(); toast(`${username} soft-banned`, 'success')
+      loadUsers(document.getElementById('admin-main'))
+    } catch (e) { toast(e.message, 'error') }
+  })
+}
+
+window.muteUser = (id, username) => {
+  openModal(`
+    <div class="modal-title"><i class="bi bi-mic-mute" style="color:#60a5fa"></i> Mute ${username}</div>
+    <div class="form-field"><label class="form-label">Duration</label>
+      <select class="input" id="mute-dur">
+        <option value="15">15 minutes</option><option value="60">1 hour</option>
+        <option value="360">6 hours</option><option value="1440">24 hours</option>
+        <option value="4320">3 days</option><option value="10080">7 days</option>
+      </select>
+    </div>
+    <div class="form-field"><label class="form-label">Reason</label>
+      <input class="input" id="mute-reason" placeholder="Reason for mute…">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="do-mute"><i class="bi bi-mic-mute"></i> Mute</button>
+    </div>
+  `)
+  document.getElementById('do-mute').addEventListener('click', async () => {
+    const duration_minutes = parseInt(document.getElementById('mute-dur').value)
+    const reason = document.getElementById('mute-reason').value || 'No reason provided'
+    try {
+      await adminFetch(`/users/${id}/mute`, { method:'POST', body:{ duration_minutes, reason } })
+      closeModal(); toast(`${username} muted`, 'success')
+      loadUsers(document.getElementById('admin-main'))
+    } catch (e) { toast(e.message, 'error') }
+  })
+}
+
+window.apiBanUser = (id, username) => {
+  openModal(`
+    <div class="modal-title"><i class="bi bi-ban" style="color:var(--red)"></i> API Ban ${username}</div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">Blocks all API requests from this user. They cannot interact with the platform at all.</p>
+    <div class="form-field"><label class="form-label">Reason</label>
+      <input class="input" id="apiband-reason" placeholder="Reason…">
+    </div>
+    <div class="form-field"><label class="form-label">Expires (optional)</label>
+      <input class="input" id="apiband-exp" type="datetime-local">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="do-apiband"><i class="bi bi-ban"></i> API Ban</button>
+    </div>
+  `)
+  document.getElementById('do-apiband').addEventListener('click', async () => {
+    const reason = document.getElementById('apiband-reason').value || 'No reason'
+    const expires_at = document.getElementById('apiband-exp').value || null
+    try {
+      await adminFetch(`/users/${id}/apiband`, { method:'POST', body:{ reason, expires_at } })
+      closeModal(); toast(`${username} API banned`, 'success')
+      loadUsers(document.getElementById('admin-main'))
+    } catch (e) { toast(e.message, 'error') }
+  })
+}
+
+window.adminAction = async (method, path, body, confirmMsg, successMsg, refresh = false) => {
+  if (confirmMsg && !confirm(confirmMsg)) return
+  try {
+    await adminFetch(path, { method, ...(body ? { body } : {}) })
+    toast(successMsg, 'success')
+    if (refresh) loadUsers(document.getElementById('admin-main'))
+  } catch (e) { toast(e.message, 'error') }
+}
+
+window.viewUser = async (id, username) => {
+  openModal(`<div class="modal-title">Loading ${username}…</div>`)
+  try {
+    const { user } = await adminFetch(`/users/${id}`)
+    document.getElementById('modal-box').innerHTML = `
+      <div class="modal-title"><i class="bi bi-person-circle"></i> ${user.username}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:13px;margin-bottom:16px">
+        <div><span style="color:var(--text-3)">Email</span><br><strong>${user.email}</strong></div>
+        <div><span style="color:var(--text-3)">Platform</span><br><strong>${user.platform||'—'}</strong></div>
+        <div><span style="color:var(--text-3)">Joined</span><br><strong>${new Date(user.created_at).toLocaleDateString()}</strong></div>
+        <div><span style="color:var(--text-3)">Posts</span><br><strong>${user.post_count||0}</strong></div>
+        <div><span style="color:var(--text-3)">Banned</span><br><strong>${user.is_banned?'Yes':'No'}</strong></div>
+        <div><span style="color:var(--text-3)">Soft-banned</span><br><strong>${user.soft_banned?'Yes':'No'}</strong></div>
+        ${user.muted_until ? `<div style="grid-column:1/-1"><span style="color:var(--text-3)">Muted until</span><br><strong>${new Date(user.muted_until).toLocaleString()}</strong> — ${user.mute_reason||''}</div>` : ''}
+        ${user.bio ? `<div style="grid-column:1/-1"><span style="color:var(--text-3)">Bio</span><br>${user.bio}</div>` : ''}
+      </div>
+      <div style="text-align:right"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>
+    `
+  } catch (e) { document.getElementById('modal-box').innerHTML = `<p>${e.message}</p>` }
+}
+
+// ── Posts ─────────────────────────────────────────────────────────────────
+async function loadPosts(main, page = 1) {
+  try {
+    const { posts, total, totalPages } = await adminFetch(`/posts?page=${page}&limit=25`).catch(() => ({ posts: [], total: 0, totalPages: 1 }))
+    // Fallback: use regular posts endpoint
+    const data = posts?.length ? { posts, total, totalPages } : await fetch('/api/posts?limit=25').then(r => r.json())
+    const list = data.posts || []
+    main.innerHTML = `
+      <div class="page-header"><h1 class="page-title" style="font-size:20px"><i class="bi bi-newspaper"></i> Posts</h1></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="admin-table">
+          <thead><tr><th>Author</th><th>Content</th><th>Tags</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${list.map(p => `
+              <tr>
+                <td style="white-space:nowrap;font-weight:600">${p.username||p.author||'Unknown'}</td>
+                <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-2);font-size:12.5px">${p.content||''}</td>
+                <td style="font-size:11px;color:var(--text-3)">${(p.tags||[]).join(', ')||'—'}</td>
+                <td style="color:var(--text-3);font-size:12px;white-space:nowrap">${timeAgo(p.created_at)}</td>
+                <td>
+                  <button class="btn btn-danger btn-sm" onclick="deletePost(${p.id})" title="Delete post">
+                    <i class="bi bi-trash3"></i> Delete
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${!list.length ? '<div class="state-container" style="padding:30px"><p class="state-desc">No posts</p></div>' : ''}
+      </div>
+    `
+  } catch (e) { main.innerHTML = `<div class="state-container"><p class="state-desc">${e.message}</p></div>` }
+}
+
+window.deletePost = async (id) => {
+  if (!confirm('Delete this post permanently?')) return
+  try {
+    await adminFetch(`/posts/${id}`, { method: 'DELETE' })
+    toast('Post deleted', 'success')
+    loadPosts(document.getElementById('admin-main'))
+  } catch (e) { toast(e.message, 'error') }
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────
+async function loadMessages(main) {
+  main.innerHTML = `
+    <div class="page-header"><h1 class="page-title" style="font-size:20px"><i class="bi bi-chat-dots"></i> Messages</h1></div>
+    <div class="card">
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:16px">
+        To delete a specific message, enter its ID (visible in the database or audit logs).
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input class="input" id="msg-id" placeholder="Message ID" type="number" style="max-width:160px">
+        <select class="input" id="msg-type" style="max-width:160px">
+          <option value="room">Room message</option>
+          <option value="clan">Clan message</option>
+        </select>
+        <button class="btn btn-danger btn-sm" id="del-msg-btn"><i class="bi bi-trash3"></i> Delete</button>
+      </div>
+      <p style="font-size:11.5px;color:var(--text-3)">
+        Message IDs appear in the Audit Logs when a message is sent (action: chat.message_sent).
+      </p>
+    </div>
+  `
+  main.querySelector('#del-msg-btn').addEventListener('click', async () => {
+    const id   = main.querySelector('#msg-id').value
+    const type = main.querySelector('#msg-type').value
+    if (!id) { toast('Enter a message ID', 'error'); return }
+    if (!confirm(`Delete ${type} message #${id}?`)) return
+    try {
+      const path = type === 'clan' ? `/clan-messages/${id}` : `/messages/${id}`
+      await adminFetch(path, { method: 'DELETE' })
+      toast('Message deleted', 'success')
+      main.querySelector('#msg-id').value = ''
+    } catch (e) { toast(e.message, 'error') }
+  })
+}
+
+// ── Clans ─────────────────────────────────────────────────────────────────
+async function loadClansView(main) {
+  main.innerHTML = `
+    <div class="page-header"><h1 class="page-title" style="font-size:20px"><i class="bi bi-shield-fill"></i> Clans</h1></div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title" style="margin-bottom:12px"><i class="bi bi-person-dash"></i> Kick User from Clan</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input class="input" id="kick-clan-id" placeholder="Clan ID" type="number" style="width:120px">
+        <input class="input" id="kick-user-id" placeholder="User ID" type="number" style="width:120px">
+        <button class="btn btn-danger btn-sm" id="do-kick"><i class="bi bi-person-dash"></i> Kick from Clan</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-bottom:12px"><i class="bi bi-trash3"></i> Delete Clan</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input class="input" id="del-clan-id" placeholder="Clan ID" type="number" style="width:120px">
+        <button class="btn btn-danger btn-sm" id="do-del-clan"><i class="bi bi-trash3"></i> Delete Clan</button>
+      </div>
+    </div>
+  `
+  main.querySelector('#do-kick').addEventListener('click', async () => {
+    const clanId = main.querySelector('#kick-clan-id').value
+    const userId = main.querySelector('#kick-user-id').value
+    if (!clanId || !userId) { toast('Enter both IDs', 'error'); return }
+    if (!confirm(`Kick user #${userId} from clan #${clanId}?`)) return
+    try {
+      await adminFetch(`/clans/${clanId}/kick/${userId}`, { method: 'POST' })
+      toast('User kicked from clan', 'success')
+    } catch (e) { toast(e.message, 'error') }
+  })
+  main.querySelector('#do-del-clan').addEventListener('click', async () => {
+    const id = main.querySelector('#del-clan-id').value
+    if (!id) { toast('Enter clan ID', 'error'); return }
+    if (!confirm(`Delete clan #${id} permanently?`)) return
+    try {
+      await adminFetch(`/clans/${id}`, { method: 'DELETE' })
+      toast('Clan deleted', 'success')
+    } catch (e) { toast(e.message, 'error') }
+  })
+}
+
+// ── API Bans ──────────────────────────────────────────────────────────────
+async function loadApiBans(main) {
+  try {
+    const { bans } = await adminFetch('/apibans')
+    main.innerHTML = `
+      <div class="page-header"><h1 class="page-title" style="font-size:20px"><i class="bi bi-ban"></i> API Bans</h1></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="admin-table">
+          <thead><tr><th>User</th><th>Reason</th><th>Expires</th><th>Issued</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${bans?.map(b => `
+              <tr>
+                <td style="font-weight:600">User #${b.user_id}</td>
+                <td style="color:var(--text-2);font-size:12.5px">${b.reason}</td>
+                <td style="color:var(--text-3);font-size:12px">${b.expires_at ? new Date(b.expires_at).toLocaleString() : 'Never'}</td>
+                <td style="color:var(--text-3);font-size:12px">${timeAgo(b.created_at)}</td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" onclick="removeApiBan(${b.id})">
+                    <i class="bi bi-x-lg"></i> Remove
+                  </button>
+                </td>
+              </tr>
+            `).join('') || ''}
+          </tbody>
+        </table>
+        ${!bans?.length ? '<div class="state-container" style="padding:30px"><p class="state-desc">No active API bans</p></div>' : ''}
+      </div>
+    `
+  } catch (e) { main.innerHTML = `<div class="state-container"><p class="state-desc">${e.message}</p></div>` }
+}
+
+window.removeApiBan = async (id) => {
+  if (!confirm('Remove this API ban?')) return
+  try {
+    await adminFetch(`/apibans/${id}`, { method: 'DELETE' })
+    toast('API ban removed', 'success')
+    loadApiBans(document.getElementById('admin-main'))
+  } catch (e) { toast(e.message, 'error') }
+}
+
+// ── Reports ───────────────────────────────────────────────────────────────
+async function loadReports(main, filter = 'pending') {
+  try {
+    const { reports } = await adminFetch(`/reports?status=${filter}`)
+    main.innerHTML = `
+      <div class="page-header"><h1 class="page-title" style="font-size:20px"><i class="bi bi-flag"></i> Reports</h1></div>
+      <div class="tabs" style="margin-bottom:16px">
+        ${['pending','reviewed','dismissed'].map(f => `
+          <button class="tab-btn ${filter===f?'active':''}" onclick="loadReports(document.getElementById('admin-main'),'${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>
+        `).join('')}
+      </div>
+      ${!reports?.length ? '<div class="state-container"><div class="state-icon">🚩</div><p class="state-title">No reports</p></div>' :
+      `<div class="card" style="padding:0;overflow:hidden">
+        <table class="admin-table">
+          <thead><tr><th>Reporter</th><th>Type</th><th>Reason</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${reports.map(r => `
+              <tr>
+                <td style="font-weight:600">${r.reporter_username||'Unknown'}</td>
+                <td><span class="tag" style="font-size:11px">${r.target_type}</span></td>
+                <td style="color:var(--text-2);font-size:12.5px">${r.reason}</td>
+                <td><span class="sbadge sbadge-${r.status==='pending'?'gold':r.status==='reviewed'?'blue':'gray'}">${r.status}</span></td>
+                <td style="color:var(--text-3);font-size:12px">${timeAgo(r.created_at)}</td>
+                <td>
+                  ${r.status==='pending' ? `
+                    <div class="action-btn-row">
+                      <button class="btn btn-secondary btn-sm" onclick="updateReport(${r.id},'reviewed')"><i class="bi bi-check-lg"></i></button>
+                      <button class="btn btn-ghost btn-sm" onclick="updateReport(${r.id},'dismissed')"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                  ` : '<span style="font-size:12px;color:var(--text-3)">Done</span>'}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`}
+    `
+  } catch (e) { main.innerHTML = `<div class="state-container"><p class="state-desc">${e.message}</p></div>` }
+}
+
+window.updateReport = async (id, status) => {
+  try {
+    await adminFetch(`/reports/${id}`, { method: 'PATCH', body: { status } })
+    toast('Report updated', 'success')
+    loadReports(document.getElementById('admin-main'), status === 'reviewed' ? 'reviewed' : 'pending')
+  } catch (e) { toast(e.message, 'error') }
+}
+
+// ── Audit Logs ────────────────────────────────────────────────────────────
+async function loadLogs(main, page = 1, filters = {}) {
+  try {
+    const q = new URLSearchParams({ page, limit: 50, ...filters })
+    const { logs, total, pages } = await adminFetch(`/audit-logs?${q}`)
+    const ACTIONS = [...new Set((logs||[]).map(l => l.action))].sort()
+    main.innerHTML = `
+      <div class="page-header"><h1 class="page-title" style="font-size:20px"><i class="bi bi-journal-text"></i> Audit Logs <span style="font-size:13px;font-weight:400;color:var(--text-3)">${total||0} entries</span></h1></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <input class="input" id="log-user" placeholder="Filter by username" value="${filters.user||''}" style="max-width:180px">
+        <input class="input" id="log-action" placeholder="Filter by action" value="${filters.action||''}" style="max-width:200px">
+        <input class="input" id="log-from" type="date" value="${filters.from||''}" style="max-width:150px">
+        <input class="input" id="log-to" type="date" value="${filters.to||''}" style="max-width:150px">
+        <button class="btn btn-secondary btn-sm" id="do-log-filter"><i class="bi bi-funnel"></i> Filter</button>
+        <button class="btn btn-ghost btn-sm" id="clear-log-filter">Clear</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="admin-table">
+          <thead><tr><th>User</th><th>Action</th><th>Target</th><th>Details</th><th>IP</th><th>When</th></tr></thead>
+          <tbody>
+            ${(logs||[]).map(l => `
+              <tr>
+                <td style="font-weight:600;font-size:12.5px">${l.username||'—'}</td>
+                <td><span style="font-family:var(--font-m);font-size:11.5px;color:var(--accent-3)">${l.action}</span></td>
+                <td style="color:var(--text-3);font-size:12px">${l.target_type||''}${l.target_id?' #'+l.target_id:''}</td>
+                <td style="font-size:11.5px;color:var(--text-2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                  title="${JSON.stringify(l.details||{}).replace(/"/g,'&quot;')}">${JSON.stringify(l.details||{}).slice(0,60)}</td>
+                <td style="font-size:11px;color:var(--text-3);font-family:var(--font-m)">${l.ip_address||'—'}</td>
+                <td style="font-size:12px;color:var(--text-3);white-space:nowrap">${timeAgo(l.created_at)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${!logs?.length ? '<div class="state-container" style="padding:30px"><p class="state-desc">No logs match your filter</p></div>' : ''}
+      </div>
+      <div class="pagination">
+        ${Array.from({ length: pages||1 }, (_,i) => `
+          <button class="btn ${i+1===page?'btn-primary':'btn-secondary'} btn-sm"
+            onclick="loadLogs(document.getElementById('admin-main'), ${i+1}, JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(filters))}')))">${i+1}</button>
+        `).join('')}
+      </div>
+    `
+    main.querySelector('#do-log-filter').addEventListener('click', () => {
+      loadLogs(main, 1, {
+        user:   main.querySelector('#log-user').value   || undefined,
+        action: main.querySelector('#log-action').value || undefined,
+        from:   main.querySelector('#log-from').value   || undefined,
+        to:     main.querySelector('#log-to').value     || undefined,
+      })
+    })
+    main.querySelector('#clear-log-filter').addEventListener('click', () => loadLogs(main, 1, {}))
+  } catch (e) { main.innerHTML = `<div class="state-container"><p class="state-desc">${e.message}</p></div>` }
+}
+</script>
+</body>
+</html>
